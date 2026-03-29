@@ -42,6 +42,57 @@ db.run(`
   )
 `);
 
+// Create user_sessions table for tracking practice sessions
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT UNIQUE NOT NULL,
+    user_id TEXT,
+    domain TEXT,
+    difficulty_level TEXT,
+    question_count INTEGER,
+    score_percentage INTEGER,
+    correct_count INTEGER,
+    wrong_count INTEGER,
+    skipped_count INTEGER,
+    time_taken_seconds INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+// Create session_answers table for detailed performance tracking
+db.run(`
+  CREATE TABLE IF NOT EXISTS session_answers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    question_id TEXT,
+    domain TEXT,
+    topic TEXT,
+    difficulty TEXT,
+    is_correct INTEGER,
+    user_answer TEXT,
+    correct_answer TEXT,
+    time_taken_seconds INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (session_id) REFERENCES user_sessions(session_id)
+  )
+`);
+
+// Create user_stats table for aggregated performance metrics
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain TEXT NOT NULL,
+    topic TEXT,
+    total_attempted INTEGER DEFAULT 0,
+    correct_count INTEGER DEFAULT 0,
+    mastery_percentage INTEGER DEFAULT 0,
+    last_attempted TIMESTAMP,
+    difficulty_level TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 // Rate limiting: 30 requests per 15 minutes per IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -76,6 +127,92 @@ KEY: Deterministic > probabilistic. Programmatic > prompt-based. Code > config f
 WRONG answers: "bigger model", "higher temp", "monitoring" fixes, "prompt" when code needed.
 
 JSON: {"domain":"D1|D2|D3|D4|D5","topic":"name","difficulty":"medium|hard","scenario":"optional 2-4 sent","question":"text","options":{"A":"text","B":"text","C":"text","D":"text"},"correct":"A|B|C|D","explanation":"2-3 sent","why_wrong":{"A":"...","B":"...","C":"...","D":"..."},"mental_model":"key insight"}`;
+
+// ===== USER PROGRESS TRACKING FUNCTIONS =====
+
+// Get user's performance stats across all sessions
+async function getUserStats(domain = null) {
+  return new Promise((resolve) => {
+    const query = domain
+      ? 'SELECT * FROM user_stats WHERE domain = ? ORDER BY mastery_percentage ASC'
+      : 'SELECT * FROM user_stats ORDER BY mastery_percentage ASC';
+    const params = domain ? [domain] : [];
+    
+    db.all(query, params, (err, rows) => {
+      if (err) resolve([]);
+      else resolve(rows || []);
+    });
+  });
+}
+
+// Get weak areas (topics user struggles with <70% mastery)
+async function getWeakAreas() {
+  return new Promise((resolve) => {
+    db.all(
+      'SELECT domain, topic, mastery_percentage, total_attempted FROM user_stats WHERE mastery_percentage < 70 AND total_attempted > 0 ORDER BY mastery_percentage ASC LIMIT 5',
+      (err, rows) => {
+        if (err) resolve([]);
+        else resolve(rows || []);
+      }
+    );
+  });
+}
+
+// Get strong areas (topics user mastered >75% mastery)
+async function getStrongAreas() {
+  return new Promise((resolve) => {
+    db.all(
+      'SELECT domain, topic, mastery_percentage FROM user_stats WHERE mastery_percentage >= 75 AND total_attempted > 0 ORDER BY mastery_percentage DESC LIMIT 5',
+      (err, rows) => {
+        if (err) resolve([]);
+        else resolve(rows || []);
+      }
+    );
+  });
+}
+
+// Update user stats after each session
+async function updateUserStats(sessionAnswers) {
+  return new Promise((resolve) => {
+    for (const answer of sessionAnswers) {
+      db.run(
+        `INSERT OR IGNORE INTO user_stats (domain, topic) VALUES (?, ?)`,
+        [answer.domain, answer.topic],
+        () => {
+          db.run(
+            `UPDATE user_stats 
+             SET total_attempted = total_attempted + 1,
+                 correct_count = correct_count + ?,
+                 mastery_percentage = ROUND((correct_count + ?) * 100.0 / (total_attempted + 1)),
+                 last_attempted = CURRENT_TIMESTAMP
+             WHERE domain = ? AND topic = ?`,
+            [answer.is_correct, answer.is_correct, answer.domain, answer.topic],
+            () => {}
+          );
+        }
+      );
+    }
+    resolve(true);
+  });
+}
+
+// Generate adaptive prompt based on user performance
+async function getAdaptivePrompt() {
+  const weakAreas = await getWeakAreas();
+  const strongAreas = await getStrongAreas();
+  
+  let adaptiveNote = '';
+  if (weakAreas.length > 0) {
+    const weakTopics = weakAreas.map(a => a.topic).join(', ');
+    adaptiveNote += `User struggles with: ${weakTopics}. Focus on areas with <70% mastery. `;
+  }
+  if (strongAreas.length > 0) {
+    const strongTopics = strongAreas.map(a => a.topic).join(', ');
+    adaptiveNote += `User has mastered: ${strongTopics}. Vary question types to consolidate knowledge. `;
+  }
+  
+  return adaptiveNote;
+}
 
 // Helper: Get question from cache (STRATEGY 4 - 50% hit rate = 50% cost savings)
 async function getCachedQuestion(domain) {
@@ -141,8 +278,12 @@ async function generateQuestionViaAPI(domain, previousTopics = []) {
     ? `Avoid: ${previousTopics.join(', ')}.`
     : '';
 
+  // Get adaptive prompt based on user's performance
+  const adaptivePrompt = await getAdaptivePrompt();
+
   const userMessage = `Generate one CCAF exam question for ${domainName}. ${avoidStr}
-Make it realistic with plausible distractors. Randomize correct answer.`;
+Make it realistic with plausible distractors. Randomize correct answer.
+${adaptivePrompt ? `PERSONALIZATION: ${adaptivePrompt}` : ''}`;
 
   try {
     // STRATEGY 1 & 2: Use cheaper Haiku model + support for Batch API
@@ -215,6 +356,121 @@ app.post('/api/ask', limiter, async (req, res) => {
     res.status(502).json({ error: `Failed to generate question: ${err.message}` });
   }
 });
+
+// Save session results and update user stats
+app.post('/api/save-session', async (req, res) => {
+  const { sessionId, domain, sessionAnswers, score, timeSeconds } = req.body;
+
+  if (!sessionId || !sessionAnswers || !Array.isArray(sessionAnswers)) {
+    return res.status(400).json({ error: 'Invalid session data' });
+  }
+
+  try {
+    // Save session record
+    db.run(
+      `INSERT OR REPLACE INTO user_sessions (session_id, domain, score_percentage, correct_count, time_taken_seconds)
+       VALUES (?, ?, ?, ?, ?)`,
+      [sessionId, domain, score, sessionAnswers.filter(a => a.is_correct).length, timeSeconds],
+      (err) => {
+        if (err) console.error('Session save error:', err);
+      }
+    );
+
+    // Save individual answers
+    for (const answer of sessionAnswers) {
+      db.run(
+        `INSERT INTO session_answers (session_id, domain, topic, difficulty, is_correct)
+         VALUES (?, ?, ?, ?, ?)`,
+        [sessionId, answer.domain, answer.topic, answer.difficulty, answer.is_correct ? 1 : 0],
+        (err) => {
+          if (err) console.error('Answer save error:', err);
+        }
+      );
+    }
+
+    // Update user stats
+    await updateUserStats(sessionAnswers);
+
+    res.json({ 
+      success: true, 
+      message: 'Session saved',
+      sessionId: sessionId
+    });
+  } catch (err) {
+    console.error('Error saving session:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get user progress summary
+app.get('/api/user-progress', async (req, res) => {
+  try {
+    const allStats = await getUserStats();
+    const weakAreas = await getWeakAreas();
+    const strongAreas = await getStrongAreas();
+
+    // Calculate overall stats
+    let totalAttempted = 0;
+    let totalCorrect = 0;
+    for (const stat of allStats) {
+      totalAttempted += stat.total_attempted || 0;
+      totalCorrect += stat.correct_count || 0;
+    }
+
+    const overallMastery = totalAttempted > 0 
+      ? Math.round((totalCorrect / totalAttempted) * 100)
+      : 0;
+
+    res.json({
+      overall_mastery: overallMastery,
+      total_attempted: totalAttempted,
+      total_correct: totalCorrect,
+      domains_studied: allStats.map(s => ({
+        domain: s.domain,
+        topic: s.topic,
+        mastery: s.mastery_percentage,
+        attempted: s.total_attempted
+      })),
+      weak_areas: weakAreas,
+      strong_areas: strongAreas,
+      recommendations: generateRecommendations(weakAreas, strongAreas)
+    });
+  } catch (err) {
+    console.error('Error getting progress:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate personalized study recommendations
+function generateRecommendations(weakAreas, strongAreas) {
+  const recommendations = [];
+
+  if (weakAreas.length > 0) {
+    recommendations.push({
+      type: 'improve',
+      message: `Focus on ${weakAreas[0].topic} (${weakAreas[0].mastery_percentage}% mastery). You've attempted ${weakAreas[0].total_attempted} questions here.`,
+      priority: 'high'
+    });
+  }
+
+  if (strongAreas.length > 0) {
+    recommendations.push({
+      type: 'consolidate',
+      message: `Great job on ${strongAreas[0].topic}! Try harder questions to consolidate knowledge.`,
+      priority: 'medium'
+    });
+  }
+
+  if (weakAreas.length > 1) {
+    recommendations.push({
+      type: 'pattern',
+      message: `You struggle with: ${weakAreas.slice(0, 3).map(w => w.topic).join(', ')}. Consider reviewing concepts together.`,
+      priority: 'high'
+    });
+  }
+
+  return recommendations;
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -1260,9 +1260,10 @@
 <script>
 // ─── State ───────────────────────────────────────────────────────────────────
 const state = {
+  sessionId: `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
   questions: [],
   currentIdx: 0,
-  answers: [],       // {correct: bool, domain, skipped}
+  answers: [],       // {correct: bool, domain, topic, difficulty, skipped}
   domainStats: { d1:{c:0,t:0}, d2:{c:0,t:0}, d3:{c:0,t:0}, d4:{c:0,t:0}, d5:{c:0,t:0} },
   totalQ: 10,
   focusDomain: 'all',
@@ -1270,6 +1271,9 @@ const state = {
   timerInterval: null,
   wrongQuestions: [],
   retryMode: false,
+  userProgress: null,  // Will store progress data from backend
+  weak_areas: [],      // Topics user struggles with
+  recommendations: [], // Personalized study recommendations
 };
 
 const DOMAINS = {
@@ -1310,6 +1314,93 @@ async function generateQuestion(domainKey, previousTopics = []) {
   }
 
   return response.json();
+}
+
+// Save session results to backend for progress tracking
+async function saveSessionResults(correct, elapsed) {
+  try {
+    const response = await fetch('/api/save-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: state.sessionId,
+        domain: state.focusDomain,
+        sessionAnswers: state.answers.map(a => ({
+          ...a,
+          is_correct: a.correct ? 1 : 0
+        })),
+        score: Math.round((correct / state.totalQ) * 100),
+        timeSeconds: elapsed
+      })
+    });
+
+    if (response.ok) {
+      console.log('✅ Session saved to database');
+    }
+  } catch (err) {
+    console.error('Error saving session:', err);
+  }
+}
+
+// Fetch and display user progress
+async function fetchUserProgress() {
+  try {
+    const response = await fetch('/api/user-progress');
+    const progress = await response.json();
+    state.userProgress = progress;
+    state.weak_areas = progress.weak_areas || [];
+    state.recommendations = progress.recommendations || [];
+    
+    console.log('📊 Progress loaded:', {
+      mastery: progress.overall_mastery,
+      weak_areas: state.weak_areas,
+      recommendations: state.recommendations
+    });
+    
+    // Display progress insights in results screen
+    displayProgressInsights();
+  } catch (err) {
+    console.error('Error fetching progress:', err);
+  }
+}
+
+// Display progress insights on results screen
+function displayProgressInsights() {
+  if (!state.userProgress) return;
+
+  const insightsDiv = document.getElementById('progressInsights') || createProgressInsightsDiv();
+  
+  let html = `<div class="insights-header">📊 Your Progress Across All Sessions</div>`;
+  
+  if (state.userProgress.overall_mastery > 0) {
+    html += `<div class="insight-stat">
+      <span>Overall Mastery:</span> <strong style="color:var(--accent)">${state.userProgress.overall_mastery}%</strong>
+      <span style="font-size:12px">(${state.userProgress.total_correct}/${state.userProgress.total_attempted} questions)</span>
+    </div>`;
+  }
+
+  if (state.recommendations.length > 0) {
+    html += `<div class="insights-recommendations">
+      <strong>📚 Recommendations:</strong>`;
+    state.recommendations.forEach(rec => {
+      const icon = rec.type === 'improve' ? '📈' : rec.type === 'consolidate' ? '✨' : '🔗';
+      html += `<div class="recommendation-item ${rec.type}" style="margin-top:8px;padding:8px;background:var(--surface2);border-left:3px solid var(--${rec.priority === 'high' ? 'red' : 'accent'}); border-radius:2px;">
+        ${icon} ${rec.message}
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  insightsDiv.innerHTML = html;
+}
+
+function createProgressInsightsDiv() {
+  let gapSec = document.getElementById('gapSection');
+  let div = document.createElement('div');
+  div.id = 'progressInsights';
+  div.style.cssText = 'margin-top: 20px; padding: 16px; background: var(--surface2); border-left: 3px solid var(--accent); border-radius: 4px;';
+  gapSec.parentNode.insertBefore(div, gapSec.nextSibling);
+  return div;
 }
 
 // ─── Exam Flow ─────────────────────────────────────────────────────────────
@@ -1445,7 +1536,14 @@ function selectAnswer(chosen, q) {
   if (isCorrect) state.domainStats[domain].c++;
   else state.wrongQuestions.push(q);
 
-  state.answers.push({ correct: isCorrect, domain, skipped: false });
+  // Track answer with topic and difficulty for progress tracking
+  state.answers.push({ 
+    correct: isCorrect, 
+    domain, 
+    topic: q.topic,
+    difficulty: q.difficulty,
+    skipped: false 
+  });
 
   // Show feedback
   showFeedback(isCorrect, chosen, q);
@@ -1484,10 +1582,94 @@ function showFeedback(isCorrect, chosen, q) {
   }
 }
 
+// Load user progress when page loads
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('📱 CCAF Practice app loaded');
+  // Load and display user progress on start screen
+  fetchAndDisplayStartScreenProgress();
+});
+
+// Fetch progress for display on start screen
+async function fetchAndDisplayStartScreenProgress() {
+  try {
+    const response = await fetch('/api/user-progress');
+    const progress = await response.json();
+    state.userProgress = progress;
+    displayStartScreenProgress(progress);
+  } catch (err) {
+    // No progress yet, user is new
+    console.log('No prior progress found (first session or fresh start)');
+  }
+}
+
+// Display progress stats on start screen
+function displayStartScreenProgress(progress) {
+  const statsContainer = document.getElementById('startScreenStats') || createStartScreenStatsDiv();
+  
+  if(!progress.overall_mastery || progress.total_attempted === 0) {
+    statsContainer.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">📊 No prior sessions yet. Begin your first exam!</div>';
+    return;
+  }
+
+  let html = `<div style="font-family:var(--mono);font-size:13px;color:var(--text-muted);margin-bottom:8px;">📊 YOUR PROGRESS:</div>`;
+  
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="background:var(--surface2);padding:8px;border-radius:2px;">
+      <div style="font-size:11px;color:var(--text-muted)">Overall Mastery</div>
+      <div style="font-size:16px;font-weight:600;color:var(--accent);">${progress.overall_mastery}%</div>
+      <div style="font-size:11px;color:var(--text-dim)">${progress.total_correct}/${progress.total_attempted} correct</div>
+    </div>
+    <div style="background:var(--surface2);padding:8px;border-radius:2px;">
+      <div style="font-size:11px;color:var(--text-muted)">Sessions</div>
+      <div style="font-size:16px;font-weight:600;color:var(--blue);">${progress.domains_studied.length}</div>
+      <div style="font-size:11px;color:var(--text-dim)">topics tracked</div>
+    </div>
+  </div>`;
+
+  if (progress.weak_areas && progress.weak_areas.length > 0) {
+    html += `<div style="background:var(--red-dim);border-left:3px solid var(--red);padding:8px;border-radius:2px;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">⚠️ Areas to Focus On:</div>`;
+    progress.weak_areas.slice(0, 3).forEach(w => {
+      html += `<div style="font-size:12px;margin:4px 0;color:var(--text);">• <strong>${w.topic}</strong> (${w.mastery_percentage}%)</div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (progress.recommendations && progress.recommendations.length > 0) {
+    html += `<div style="background:var(--accent-dim2);border-left:3px solid var(--accent);padding:8px;border-radius:2px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:4px;">💡 Suggestion:</div>
+      <div style="font-size:12px;color:var(--text);">${progress.recommendations[0].message}</div>
+    </div>`;
+  }
+
+  statsContainer.innerHTML = html;
+}
+
+function createStartScreenStatsDiv() {
+  const startScreen = document.getElementById('startScreen');
+  const div = document.createElement('div');
+  div.id = 'startScreenStats';
+  div.style.cssText = 'margin: 16px 0; padding: 12px; background: var(--surface2); border-radius: 4px; border: 1px solid var(--border);';
+  
+  // Find the right place to insert (after domain selector usually)
+  const footer = startScreen.querySelector('.start-screen-footer') || startScreen.lastElementChild;
+  startScreen.insertBefore(div, footer);
+  
+  return div;
+}
+}
+
 function skipQuestion() {
-  const domain = state.questions[state.currentIdx]?._domain || 'd1';
+  const q = state.questions[state.currentIdx];
+  const domain = q?._domain || 'd1';
   state.domainStats[domain].t++;
-  state.answers.push({ correct: false, domain, skipped: true });
+  state.answers.push({ 
+    correct: false, 
+    domain, 
+    topic: q?.topic,
+    difficulty: q?.difficulty,
+    skipped: true 
+  });
   updateQHistory();
   nextQuestion();
 }
@@ -1515,6 +1697,11 @@ function showResults() {
   const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
   const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
   const secs = (elapsed % 60).toString().padStart(2,'0');
+
+  // Save session to backend
+  saveSessionResults(correct, elapsed);
+  // Fetch updated user progress
+  fetchUserProgress();
 
   show('resultsScreen');
 
