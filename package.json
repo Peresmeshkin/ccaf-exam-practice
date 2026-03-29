@@ -1,0 +1,24 @@
+{
+  "name": "ccaf-exam-practice",
+  "version": "1.0.0",
+  "description": "Claude Certified Architect Foundations (CCAF) Practice Exam - AI-Powered",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "CCAF",
+    "Claude",
+    "Certification",
+    "Exam",
+    "Practice"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5"
+  }
+}

@@ -1,0 +1,1707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCAF Exam Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2230;
+    --border: #2a3441;
+    --border2: #374152;
+    --text: #e6edf3;
+    --text-muted: #7d8fa3;
+    --text-dim: #4a5568;
+    --accent: #f0b429;
+    --accent-dim: rgba(240,180,41,0.12);
+    --accent-dim2: rgba(240,180,41,0.06);
+    --green: #3fb950;
+    --green-dim: rgba(63,185,80,0.12);
+    --red: #f85149;
+    --red-dim: rgba(248,81,73,0.12);
+    --blue: #58a6ff;
+    --blue-dim: rgba(88,166,255,0.10);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .exam-badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .score-display {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .score-display span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .timer {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 4px;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  .timer.warning { color: var(--red); border-color: var(--red); }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    padding: 24px 0;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .domain-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 5px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 1px solid transparent;
+  }
+
+  .domain-item:hover { background: var(--surface2); }
+  .domain-item.active {
+    background: var(--accent-dim);
+    border-color: rgba(240,180,41,0.25);
+  }
+
+  .domain-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    flex: 1;
+    line-height: 1.3;
+  }
+
+  .domain-item.active .domain-name { color: var(--accent); }
+
+  .domain-pct {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: 8px;
+  }
+
+  .domain-score {
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+  }
+
+  .domain-score.good { color: var(--green); background: var(--green-dim); }
+  .domain-score.bad { color: var(--red); background: var(--red-dim); }
+  .domain-score.neutral { color: var(--text-muted); }
+
+  /* Progress */
+  .progress-wrap {
+    padding: 0 20px;
+  }
+
+  .progress-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    padding: 40px 48px;
+    width: 100%;
+  }
+
+  /* START SCREEN */
+  .start-screen {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 48px;
+    padding-top: 20px;
+  }
+
+  .start-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .start-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .insight-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .insight-item {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+
+  .insight-item:last-child { margin-bottom: 0; }
+
+  .insight-item strong { color: var(--text); font-weight: 600; }
+
+  .insight-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .insight-stat-value {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .insight-stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .domain-tips {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .domain-tips strong { color: var(--accent); }
+
+  .start-title {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .start-subtitle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 32px;
+  }
+
+  .start-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 40px;
+  }
+
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .info-card-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .info-card-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--mono);
+  }
+
+  .info-card-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .domain-list-start {
+    width: 100%;
+    margin-bottom: 40px;
+  }
+
+  .domain-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .domain-row:first-child { border-top: 1px solid var(--border); }
+
+  .domain-row-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    width: 20px;
+  }
+
+  .domain-row-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .domain-row-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .domain-row-bar {
+    width: 80px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .domain-row-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0d1117;
+    border: none;
+    padding: 13px 32px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .btn-primary:hover { background: #ffc947; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border2);
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* QUESTION SCREEN */
+  .question-screen { 
+    display: none;
+    max-width: 900px;
+  }
+
+  /* Results Screen */
+  .results-screen { 
+    display: none;
+    max-width: 900px;
+  }
+
+  .q-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .q-domain-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+
+  .tag-d1 { color: #79c0ff; border-color: rgba(121,192,255,0.3); background: rgba(121,192,255,0.07); }
+  .tag-d2 { color: #d2a8ff; border-color: rgba(210,168,255,0.3); background: rgba(210,168,255,0.07); }
+  .tag-d3 { color: #56d364; border-color: rgba(86,211,100,0.3); background: rgba(86,211,100,0.07); }
+  .tag-d4 { color: #ffa657; border-color: rgba(255,166,87,0.3); background: rgba(255,166,87,0.07); }
+  .tag-d5 { color: #ff7b72; border-color: rgba(255,123,114,0.3); background: rgba(255,123,114,0.07); }
+
+  .q-difficulty {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: auto;
+  }
+
+  .scenario-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .scenario-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .scenario-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .question-text {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer;
+    background: var(--surface);
+    transition: all 0.15s;
+    text-align: left;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .option:hover:not(:disabled) {
+    border-color: var(--border2);
+    background: var(--surface2);
+  }
+
+  .option-letter {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    margin-top: 1px;
+  }
+
+  .option-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  /* Option states */
+  .option.selected {
+    border-color: var(--blue);
+    background: var(--blue-dim);
+  }
+
+  .option.selected .option-letter {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: white;
+  }
+
+  .option.correct {
+    border-color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .option.correct .option-letter {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+
+  .option.wrong {
+    border-color: var(--red);
+    background: var(--red-dim);
+  }
+
+  .option.wrong .option-letter {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+  }
+
+  .option.dimmed { opacity: 0.4; }
+  .option:disabled { cursor: default; }
+
+  /* Feedback */
+  .feedback-box {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 24px;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .feedback-box.correct-fb { border-color: var(--green); }
+  .feedback-box.wrong-fb { border-color: var(--red); }
+
+  .feedback-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .feedback-icon {
+    font-size: 18px;
+  }
+
+  .feedback-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .correct-fb .feedback-title { color: var(--green); }
+  .wrong-fb .feedback-title { color: var(--red); }
+
+  .feedback-body {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  .feedback-body strong { color: var(--text); }
+
+  .mental-model {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--accent-dim2);
+    border: 1px solid rgba(240,180,41,0.15);
+    border-radius: 5px;
+  }
+
+  .mental-model-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .mental-model-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .q-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  /* Loading */
+  .loading-screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    gap: 20px;
+  }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .results-title {
+    font-size: 26px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .results-subtitle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+  }
+
+  .score-circle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    margin-bottom: 40px;
+  }
+
+  .score-circle {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface);
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .score-circle.pass { border-color: var(--green); }
+  .score-circle.fail { border-color: var(--red); }
+
+  .score-pct {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .score-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .score-verdict {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+
+  .score-circle.pass .score-verdict { color: var(--green); }
+  .score-circle.fail .score-verdict { color: var(--red); }
+
+  .score-stats {
+    flex: 1;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--text-muted); }
+  .stat-val { font-family: var(--mono); font-weight: 600; color: var(--text); }
+
+  .domain-breakdown {
+    margin-bottom: 32px;
+  }
+
+  .breakdown-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .breakdown-name {
+    font-size: 13px;
+    color: var(--text-muted);
+    width: 260px;
+    flex-shrink: 0;
+  }
+
+  .breakdown-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .breakdown-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+
+  .breakdown-pct {
+    font-family: var(--mono);
+    font-size: 12px;
+    width: 40px;
+    text-align: right;
+  }
+
+  .gap-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .gap-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+
+  .gap-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+
+  .gap-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+
+  .gap-text { color: var(--text-muted); line-height: 1.5; }
+
+  .results-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Error */
+  .error-box {
+    display: none;
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--red);
+    font-family: var(--mono);
+    margin-bottom: 20px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Q history dots */
+  .q-history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 0 20px;
+  }
+
+  .q-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+  }
+
+  .q-dot.answered-correct { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .q-dot.answered-wrong { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .q-dot.current { border-color: var(--accent); color: var(--accent); }
+
+  .sidebar-section.history-section { border-bottom: none; margin-bottom: 0; }
+
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  /* Responsive - hide panel on smaller screens */
+  @media (max-width: 1200px) {
+    .start-screen {
+      grid-template-columns: 1fr;
+      gap: 32px;
+    }
+    .start-panel {
+      order: -1;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .main {
+      padding: 24px 20px;
+    }
+    .start-screen {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .start-panel {
+      display: none;
+    }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">CCA·PREP</div>
+    <div class="exam-badge">Foundations · 301-Level</div>
+  </div>
+  <div class="header-right">
+    <div class="score-display" id="headerScore" style="display:none">
+      Score: <span id="headerScoreVal">0/0</span>
+    </div>
+    <div class="timer" id="timer" style="display:none">00:00</div>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Exam Domains</div>
+      <div class="domain-item active" data-domain="all">
+        <span class="domain-name">All Domains</span>
+        <span class="domain-pct"></span>
+        <span class="domain-score neutral" id="ds-all">—</span>
+      </div>
+      <div class="domain-item" data-domain="d1">
+        <span class="domain-name">Agentic Architecture</span>
+        <span class="domain-pct">27%</span>
+        <span class="domain-score neutral" id="ds-d1">—</span>
+      </div>
+      <div class="domain-item" data-domain="d2">
+        <span class="domain-name">Tool Design & MCP</span>
+        <span class="domain-pct">18%</span>
+        <span class="domain-score neutral" id="ds-d2">—</span>
+      </div>
+      <div class="domain-item" data-domain="d3">
+        <span class="domain-name">Claude Code</span>
+        <span class="domain-pct">20%</span>
+        <span class="domain-score neutral" id="ds-d3">—</span>
+      </div>
+      <div class="domain-item" data-domain="d4">
+        <span class="domain-name">Prompt Engineering</span>
+        <span class="domain-pct">20%</span>
+        <span class="domain-score neutral" id="ds-d4">—</span>
+      </div>
+      <div class="domain-item" data-domain="d5">
+        <span class="domain-name">Context & Reliability</span>
+        <span class="domain-pct">15%</span>
+        <span class="domain-score neutral" id="ds-d5">—</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Progress</div>
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-text">
+          <span id="progressText">0 answered</span>
+          <span id="progressTotal">of 10</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section history-section">
+      <div class="sidebar-label" style="padding:0 0 12px 0">Question Map</div>
+      <div class="q-history" id="qHistory"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- START SCREEN -->
+    <div class="start-screen" id="startScreen">
+      <div class="start-content">
+        <div class="start-title">Claude Certified Architect</div>
+        <div class="start-subtitle">Foundations Practice Exam · AI-Powered · Adaptive</div>
+
+        <div class="start-info-grid">
+        <div class="info-card">
+          <div class="info-card-label">Questions</div>
+          <div class="info-card-value">10</div>
+          <div class="info-card-sub">per session, AI-generated</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Format</div>
+          <div class="info-card-value">MCQ</div>
+          <div class="info-card-sub">one correct, three distractors</div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-label">Passing Score</div>
+          <div class="info-card-value">72%</div>
+          <div class="info-card-sub">720/1000 on real exam</div>
+        </div>
+      </div>
+
+      <div class="domain-list-start">
+        <div class="domain-row">
+          <div class="domain-row-num">D1</div>
+          <div class="domain-row-name">Agentic Architecture & Orchestration</div>
+          <div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:27%"></div></div>
+          <div class="domain-row-pct">27%</div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-row-num">D2</div>
+          <div class="domain-row-name">Tool Design & MCP Integration</div>
+          <div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:18%"></div></div>
+          <div class="domain-row-pct">18%</div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-row-num">D3</div>
+          <div class="domain-row-name">Claude Code Configuration & Workflows</div>
+          <div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:20%"></div></div>
+          <div class="domain-row-pct">20%</div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-row-num">D4</div>
+          <div class="domain-row-name">Prompt Engineering & Structured Output</div>
+          <div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:20%"></div></div>
+          <div class="domain-row-pct">20%</div>
+        </div>
+        <div class="domain-row">
+          <div class="domain-row-num">D5</div>
+          <div class="domain-row-name">Context Management & Reliability</div>
+          <div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:15%"></div></div>
+          <div class="domain-row-pct">15%</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+        <label style="font-size:13px;color:var(--text-muted);font-family:var(--mono)">Focus domain:</label>
+        <select id="domainSelect" style="background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:5px;font-family:var(--mono);font-size:12px;cursor:pointer;outline:none">
+          <option value="all">All Domains (weighted)</option>
+          <option value="d1">D1 · Agentic Architecture</option>
+          <option value="d2">D2 · Tool Design & MCP</option>
+          <option value="d3">D3 · Claude Code</option>
+          <option value="d4">D4 · Prompt Engineering</option>
+          <option value="d5">D5 · Context & Reliability</option>
+        </select>
+        <label style="font-size:13px;color:var(--text-muted);font-family:var(--mono)">Questions:</label>
+        <select id="qCountSelect" style="background:var(--surface);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:5px;font-family:var(--mono);font-size:12px;cursor:pointer;outline:none">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+
+      <button class="btn-primary" id="startBtn" onclick="startExam()">Begin Practice Exam →</button>
+      </div>
+
+      <!-- RIGHT PANEL -->
+      <div class="start-panel">
+        <!-- Exam Facts Card -->
+        <div class="insight-card">
+          <div class="insight-title">Exam Facts</div>
+          <div class="insight-stat">
+            <span class="insight-stat-value">72%</span>
+            <span class="insight-stat-label">Passing Score</span>
+          </div>
+          <div class="insight-stat">
+            <span class="insight-stat-value">100 min</span>
+            <span class="insight-stat-label">Typical Duration</span>
+          </div>
+          <div class="insight-stat">
+            <span class="insight-stat-value">1:40 min</span>
+            <span class="insight-stat-label">Per Question</span>
+          </div>
+        </div>
+
+        <!-- Key Success Tips -->
+        <div class="insight-card">
+          <div class="insight-title">Success Tips</div>
+          <div class="insight-item">✓ <strong>Read carefully</strong> — architectural choices matter</div>
+          <div class="insight-item">✓ <strong>Trace root cause</strong> — not symptoms</div>
+          <div class="insight-item">✓ <strong>Code > Prompt</strong> — for critical logic</div>
+          <div class="insight-item">✓ <strong>Avoid "upsize"</strong> — not an architectural fix</div>
+        </div>
+
+        <!-- Domain Spotlight -->
+        <div class="insight-card">
+          <div class="insight-title">Study Focus</div>
+          <div class="domain-tips">
+            <strong style="color: #79c0ff;">D1 (27%):</strong> Hub-spoke, coordinator patterns
+          </div>
+          <div class="domain-tips">
+            <strong style="color: #d2a8ff;">D2 (18%):</strong> MCP primitives, tool scoping
+          </div>
+          <div class="domain-tips">
+            <strong style="color: #56d364;">D3 (20%):</strong> Config hierarchy, CI/CD flags
+          </div>
+          <div class="domain-tips">
+            <strong style="color: #ffa657;">D4 (20%):</strong> JSON schema, validation loops
+          </div>
+          <div class="domain-tips">
+            <strong style="color: #ff7b72;">D5 (15%):</strong> Context window, chunking
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOADING SCREEN -->
+    <div class="loading-screen" id="loadingScreen">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">Generating question...</div>
+    </div>
+
+    <!-- ERROR BOX -->
+    <div class="error-box" id="errorBox"></div>
+
+    <!-- QUESTION SCREEN -->
+    <div class="question-screen" id="questionScreen">
+      <div class="q-meta">
+        <div class="q-number" id="qNumber">Question 1 of 10</div>
+        <div class="q-domain-tag tag-d1" id="qDomainTag">Agentic Architecture</div>
+        <div class="q-difficulty" id="qDifficulty"></div>
+      </div>
+
+      <div class="scenario-box" id="scenarioBox" style="display:none">
+        <div class="scenario-label">Scenario</div>
+        <div class="scenario-text" id="scenarioText"></div>
+      </div>
+
+      <div class="question-text" id="questionText"></div>
+
+      <div class="options" id="optionsContainer"></div>
+
+      <div class="feedback-box" id="feedbackBox">
+        <div class="feedback-header">
+          <div class="feedback-icon" id="feedbackIcon"></div>
+          <div class="feedback-title" id="feedbackTitle"></div>
+        </div>
+        <div class="feedback-body" id="feedbackBody"></div>
+        <div class="mental-model" id="mentalModelBox" style="display:none">
+          <div class="mental-model-label">🧠 Mental Model</div>
+          <div class="mental-model-text" id="mentalModelText"></div>
+        </div>
+      </div>
+
+      <div class="q-actions">
+        <button class="btn-primary" id="nextBtn" style="display:none" onclick="nextQuestion()">
+          Next Question →
+        </button>
+        <button class="btn-secondary" id="skipBtn" onclick="skipQuestion()">Skip</button>
+      </div>
+    </div>
+
+    <!-- RESULTS SCREEN -->
+    <div class="results-screen" id="resultsScreen">
+      <div class="results-title" id="resultsTitle">Session Complete</div>
+      <div class="results-subtitle" id="resultsSubtitle"></div>
+
+      <div class="score-circle-wrap">
+        <div class="score-circle" id="scoreCircle">
+          <div class="score-pct" id="scorePct">0%</div>
+          <div class="score-label">Score</div>
+          <div class="score-verdict" id="scoreVerdict"></div>
+        </div>
+        <div class="score-stats">
+          <div class="stat-row">
+            <span class="stat-label">Correct answers</span>
+            <span class="stat-val" id="statCorrect">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Wrong answers</span>
+            <span class="stat-val" id="statWrong">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Skipped</span>
+            <span class="stat-val" id="statSkipped">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Time taken</span>
+            <span class="stat-val" id="statTime">—</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Passing threshold</span>
+            <span class="stat-val">72%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="domain-breakdown">
+        <div class="breakdown-title">Performance by Domain</div>
+        <div id="domainBreakdown"></div>
+      </div>
+
+      <div class="gap-section" id="gapSection" style="display:none">
+        <div class="gap-title">⚠ Knowledge Gaps Identified</div>
+        <div id="gapList"></div>
+      </div>
+
+      <div class="results-actions">
+        <button class="btn-primary" onclick="restartExam()">New Session →</button>
+        <button class="btn-secondary" onclick="retryWrong()">Retry Wrong Answers</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  questions: [],
+  currentIdx: 0,
+  answers: [],       // {correct: bool, domain, skipped}
+  domainStats: { d1:{c:0,t:0}, d2:{c:0,t:0}, d3:{c:0,t:0}, d4:{c:0,t:0}, d5:{c:0,t:0} },
+  totalQ: 10,
+  focusDomain: 'all',
+  startTime: null,
+  timerInterval: null,
+  wrongQuestions: [],
+  retryMode: false,
+};
+
+const DOMAINS = {
+  d1: { name: 'Agentic Architecture & Orchestration', tag: 'tag-d1', short: 'Agentic Architecture', weight: 27 },
+  d2: { name: 'Tool Design & MCP Integration',        tag: 'tag-d2', short: 'Tool Design & MCP',   weight: 18 },
+  d3: { name: 'Claude Code Configuration',            tag: 'tag-d3', short: 'Claude Code',         weight: 20 },
+  d4: { name: 'Prompt Engineering & Structured Output', tag: 'tag-d4', short: 'Prompt Engineering', weight: 20 },
+  d5: { name: 'Context Management & Reliability',     tag: 'tag-d5', short: 'Context & Reliability', weight: 15 },
+};
+
+// Pick domain based on weighting
+function pickDomain(focus) {
+  if (focus !== 'all') return focus;
+  const weights = [
+    {d:'d1',w:27},{d:'d2',w:18},{d:'d3',w:20},{d:'d4',w:20},{d:'d5',w:15}
+  ];
+  const r = Math.random() * 100;
+  let acc = 0;
+  for (const {d,w} of weights) {
+    acc += w;
+    if (r < acc) return d;
+  }
+  return 'd1';
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+// Call local /api/ask endpoint instead of Anthropic directly
+async function generateQuestion(domainKey, previousTopics = []) {
+  const response = await fetch('/api/ask', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ domain: domainKey, previousTopics })
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Server error');
+  }
+
+  return response.json();
+}
+
+// ─── Exam Flow ─────────────────────────────────────────────────────────────
+function show(id) {
+  ['startScreen','loadingScreen','questionScreen','resultsScreen'].forEach(s => {
+    document.getElementById(s).style.display = 'none';
+  });
+  document.getElementById(id).style.display = id === 'loadingScreen' ? 'flex' : 'block';
+}
+
+async function startExam() {
+  state.focusDomain = document.getElementById('domainSelect').value;
+  state.totalQ = parseInt(document.getElementById('qCountSelect').value);
+  state.questions = [];
+  state.answers = [];
+  state.currentIdx = 0;
+  state.domainStats = { d1:{c:0,t:0}, d2:{c:0,t:0}, d3:{c:0,t:0}, d4:{c:0,t:0}, d5:{c:0,t:0} };
+  state.wrongQuestions = [];
+  state.startTime = Date.now();
+
+  document.getElementById('progressTotal').textContent = `of ${state.totalQ}`;
+  updateQHistory();
+  updateHeaderScore();
+  startTimer();
+
+  document.getElementById('headerScore').style.display = 'flex';
+  document.getElementById('timer').style.display = 'block';
+
+  // Update sidebar active
+  document.querySelectorAll('.domain-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.domain === state.focusDomain || (state.focusDomain === 'all' && el.dataset.domain === 'all'));
+  });
+
+  await loadNextQuestion();
+}
+
+async function loadNextQuestion() {
+  show('loadingScreen');
+  document.getElementById('errorBox').style.display = 'none';
+
+  const loadingMsgs = [
+    'Generating scenario...', 'Crafting distractors...', 
+    'Calibrating difficulty...', 'Building question...'
+  ];
+  let li = 0;
+  const lt = setInterval(() => {
+    document.getElementById('loadingText').textContent = loadingMsgs[li++ % loadingMsgs.length];
+  }, 800);
+
+  try {
+    const domain = pickDomain(state.focusDomain);
+    const previousTopics = state.questions.map(q => q.topic);
+    const q = await generateQuestion(domain, previousTopics);
+    q._domain = domain;
+    state.questions.push(q);
+
+    clearInterval(lt);
+    renderQuestion(q);
+  } catch(e) {
+    clearInterval(lt);
+    show('questionScreen');
+    const eb = document.getElementById('errorBox');
+    eb.style.display = 'block';
+    eb.textContent = `⚠ API Error: ${e.message}. Check your connection and try again.`;
+    document.getElementById('skipBtn').style.display = 'inline-block';
+  }
+}
+
+function renderQuestion(q) {
+  show('questionScreen');
+
+  const idx = state.currentIdx;
+  const domain = q._domain;
+
+  document.getElementById('qNumber').textContent = `Question ${idx + 1} of ${state.totalQ}`;
+
+  const tag = document.getElementById('qDomainTag');
+  tag.textContent = DOMAINS[domain].short;
+  tag.className = `q-domain-tag ${DOMAINS[domain].tag}`;
+
+  document.getElementById('qDifficulty').textContent = (q.difficulty || '').toUpperCase();
+
+  const scenarioBox = document.getElementById('scenarioBox');
+  if (q.scenario && q.scenario.trim()) {
+    scenarioBox.style.display = 'block';
+    document.getElementById('scenarioText').textContent = q.scenario;
+  } else {
+    scenarioBox.style.display = 'none';
+  }
+
+  document.getElementById('questionText').textContent = q.question;
+
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+
+  ['A','B','C','D'].forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.innerHTML = `
+      <div class="option-letter">${letter}</div>
+      <div class="option-text">${q.options[letter]}</div>
+    `;
+    btn.onclick = () => selectAnswer(letter, q);
+    container.appendChild(btn);
+  });
+
+  document.getElementById('feedbackBox').style.display = 'none';
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('skipBtn').style.display = 'inline-block';
+
+  updateQHistory();
+}
+
+function selectAnswer(chosen, q) {
+  // Disable all options
+  document.querySelectorAll('.option').forEach((btn, i) => {
+    btn.disabled = true;
+    const letter = ['A','B','C','D'][i];
+    if (letter === q.correct) {
+      btn.classList.add('correct');
+    } else if (letter === chosen && chosen !== q.correct) {
+      btn.classList.add('wrong');
+    } else {
+      btn.classList.add('dimmed');
+    }
+  });
+
+  const isCorrect = chosen === q.correct;
+  const domain = q._domain;
+
+  // Update stats
+  state.domainStats[domain].t++;
+  if (isCorrect) state.domainStats[domain].c++;
+  else state.wrongQuestions.push(q);
+
+  state.answers.push({ correct: isCorrect, domain, skipped: false });
+
+  // Show feedback
+  showFeedback(isCorrect, chosen, q);
+  document.getElementById('nextBtn').style.display = 'inline-block';
+  document.getElementById('skipBtn').style.display = 'none';
+
+  updateDomainScores();
+  updateHeaderScore();
+  updateQHistory();
+}
+
+function showFeedback(isCorrect, chosen, q) {
+  const box = document.getElementById('feedbackBox');
+  box.className = `feedback-box ${isCorrect ? 'correct-fb' : 'wrong-fb'}`;
+  box.style.display = 'block';
+
+  document.getElementById('feedbackIcon').textContent = isCorrect ? '✓' : '✗';
+  document.getElementById('feedbackTitle').textContent = isCorrect ? 'Correct!' : `Incorrect — The answer is ${q.correct}`;
+
+  let body = '';
+  if (isCorrect) {
+    body = `<strong>Why ${q.correct} is right:</strong> ${q.explanation}`;
+  } else {
+    body = `<strong>Why ${chosen} is wrong:</strong> ${(q.why_wrong || {})[chosen] || 'This answer misidentifies the root cause or applies the wrong architectural pattern.'}<br><br>`;
+    body += `<strong>Why ${q.correct} is correct:</strong> ${q.explanation}`;
+  }
+
+  document.getElementById('feedbackBody').innerHTML = body;
+
+  const mmBox = document.getElementById('mentalModelBox');
+  if (q.mental_model) {
+    mmBox.style.display = 'block';
+    document.getElementById('mentalModelText').textContent = q.mental_model;
+  } else {
+    mmBox.style.display = 'none';
+  }
+}
+
+function skipQuestion() {
+  const domain = state.questions[state.currentIdx]?._domain || 'd1';
+  state.domainStats[domain].t++;
+  state.answers.push({ correct: false, domain, skipped: true });
+  updateQHistory();
+  nextQuestion();
+}
+
+function nextQuestion() {
+  state.currentIdx++;
+  if (state.currentIdx >= state.totalQ) {
+    showResults();
+  } else {
+    loadNextQuestion();
+  }
+}
+
+// ─── Results ─────────────────────────────────────────────────────────────────
+function showResults() {
+  clearInterval(state.timerInterval);
+  document.getElementById('timer').style.display = 'none';
+
+  const correct = state.answers.filter(a => a.correct).length;
+  const skipped = state.answers.filter(a => a.skipped).length;
+  const wrong = state.answers.length - correct - skipped;
+  const pct = Math.round((correct / state.totalQ) * 100);
+  const pass = pct >= 72;
+
+  const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+  const mins = Math.floor(elapsed / 60).toString().padStart(2,'0');
+  const secs = (elapsed % 60).toString().padStart(2,'0');
+
+  show('resultsScreen');
+
+  document.getElementById('resultsTitle').textContent = pass ? '🏆 Session Complete — Passing Score!' : 'Session Complete';
+  document.getElementById('resultsSubtitle').textContent = pass
+    ? `You scored above the passing threshold. ${state.totalQ} questions completed.`
+    : `Below passing threshold. Focus on the gaps below. ${state.totalQ} questions completed.`;
+
+  const circle = document.getElementById('scoreCircle');
+  circle.className = `score-circle ${pass ? 'pass' : 'fail'}`;
+  document.getElementById('scorePct').textContent = `${pct}%`;
+  document.getElementById('scoreVerdict').textContent = pass ? '▲ PASS' : '▼ FAIL';
+
+  document.getElementById('statCorrect').textContent = correct;
+  document.getElementById('statWrong').textContent = wrong;
+  document.getElementById('statSkipped').textContent = skipped;
+  document.getElementById('statTime').textContent = `${mins}:${secs}`;
+
+  // Domain breakdown
+  const bd = document.getElementById('domainBreakdown');
+  bd.innerHTML = '';
+  const gaps = [];
+
+  Object.entries(state.domainStats).forEach(([key, {c, t}]) => {
+    if (t === 0) return;
+    const dpct = Math.round((c / t) * 100);
+    const color = dpct >= 72 ? 'var(--green)' : dpct >= 50 ? 'var(--accent)' : 'var(--red)';
+    if (dpct < 72) gaps.push({ domain: DOMAINS[key].name, pct: dpct, t });
+
+    bd.innerHTML += `
+      <div class="breakdown-row">
+        <div class="breakdown-name">${DOMAINS[key].short}</div>
+        <div class="breakdown-bar-bg">
+          <div class="breakdown-bar-fill" style="width:${dpct}%;background:${color}"></div>
+        </div>
+        <div class="breakdown-pct" style="color:${color}">${dpct}%</div>
+      </div>`;
+  });
+
+  // Gaps
+  const gapSection = document.getElementById('gapSection');
+  if (gaps.length > 0) {
+    gapSection.style.display = 'block';
+    const gl = document.getElementById('gapList');
+    gl.innerHTML = gaps.map(g => `
+      <div class="gap-item">
+        <div class="gap-dot"></div>
+        <div class="gap-text"><strong>${g.domain}</strong> — scored ${g.pct}% (${g.t} questions). ${getGapAdvice(g.domain)}</div>
+      </div>`).join('');
+  } else {
+    gapSection.style.display = 'none';
+  }
+
+  updateDomainScores();
+}
+
+function getGapAdvice(domainName) {
+  const advice = {
+    'Agentic Architecture & Orchestration': 'Focus on hub-and-spoke patterns, root cause tracing, and the coordinator vs subagent responsibility split.',
+    'Tool Design & MCP Integration': 'Review MCP primitives (tools/resources/prompts), tool boundary design, and when to scope tools programmatically.',
+    'Claude Code Configuration': 'Memorise the CLAUDE.md vs ~/.claude.json hierarchy and CI/CD flags (-p, --output-format json).',
+    'Prompt Engineering & Structured Output': 'Practice JSON schema enforcement, validation+retry loops, and the difference between prompt guidance and programmatic enforcement.',
+    'Context Management & Reliability': 'Study context window saturation symptoms, chunking strategies, and context re-injection patterns.',
+  };
+  return advice[domainName] || 'Review the official Anthropic Academy course for this domain.';
+}
+
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+function updateDomainScores() {
+  Object.entries(state.domainStats).forEach(([key, {c, t}]) => {
+    const el = document.getElementById(`ds-${key}`);
+    if (!el) return;
+    if (t === 0) { el.textContent = '—'; el.className = 'domain-score neutral'; return; }
+    const pct = Math.round((c / t) * 100);
+    el.textContent = `${pct}%`;
+    el.className = `domain-score ${pct >= 72 ? 'good' : 'bad'}`;
+  });
+
+  const allA = state.answers;
+  const allEl = document.getElementById('ds-all');
+  if (allA.length > 0) {
+    const pct = Math.round((allA.filter(a=>a.correct).length / allA.length) * 100);
+    allEl.textContent = `${pct}%`;
+    allEl.className = `domain-score ${pct >= 72 ? 'good' : 'bad'}`;
+  }
+}
+
+function updateHeaderScore() {
+  const correct = state.answers.filter(a => a.correct).length;
+  document.getElementById('headerScoreVal').textContent = `${correct}/${state.answers.length}`;
+}
+
+function updateQHistory() {
+  const container = document.getElementById('qHistory');
+  container.innerHTML = '';
+  for (let i = 0; i < state.totalQ; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'q-dot';
+    dot.textContent = i + 1;
+    if (i < state.answers.length) {
+      const a = state.answers[i];
+      dot.classList.add(a.skipped ? 'answered-wrong' : a.correct ? 'answered-correct' : 'answered-wrong');
+    } else if (i === state.currentIdx) {
+      dot.classList.add('current');
+    }
+    container.appendChild(dot);
+  }
+
+  // Progress
+  const answered = state.answers.length;
+  const pct = (answered / state.totalQ) * 100;
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${answered} answered`;
+}
+
+function startTimer() {
+  clearInterval(state.timerInterval);
+  const timerEl = document.getElementById('timer');
+  state.timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    const m = Math.floor(elapsed / 60).toString().padStart(2,'0');
+    const s = (elapsed % 60).toString().padStart(2,'0');
+    timerEl.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function restartExam() {
+  state.retryMode = false;
+  show('startScreen');
+  document.getElementById('headerScore').style.display = 'none';
+  document.getElementById('timer').style.display = 'none';
+  clearInterval(state.timerInterval);
+  // Reset domain score displays
+  ['all','d1','d2','d3','d4','d5'].forEach(k => {
+    const el = document.getElementById(`ds-${k}`);
+    if (el) { el.textContent = '—'; el.className = 'domain-score neutral'; }
+  });
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('progressText').textContent = '0 answered';
+  document.getElementById('qHistory').innerHTML = '';
+}
+
+function retryWrong() {
+  if (state.wrongQuestions.length === 0) return;
+  state.retryMode = true;
+  state.currentIdx = 0;
+  state.answers = [];
+  state.domainStats = { d1:{c:0,t:0}, d2:{c:0,t:0}, d3:{c:0,t:0}, d4:{c:0,t:0}, d5:{c:0,t:0} };
+  state.totalQ = state.wrongQuestions.length;
+  state.startTime = Date.now();
+
+  document.getElementById('progressTotal').textContent = `of ${state.totalQ}`;
+  document.getElementById('headerScore').style.display = 'flex';
+  document.getElementById('timer').style.display = 'block';
+  updateQHistory();
+  startTimer();
+  renderWrongQuestion();
+}
+
+function renderWrongQuestion() {
+  if (state.currentIdx >= state.wrongQuestions.length) {
+    showResults();
+    return;
+  }
+  const q = state.wrongQuestions[state.currentIdx];
+  renderQuestion(q);
+}
+
+// Override nextQuestion for retry mode
+const origNext = nextQuestion;
+function nextQuestion() {
+  state.currentIdx++;
+  if (state.currentIdx >= state.totalQ) {
+    showResults();
+  } else if (state.retryMode) {
+    renderWrongQuestion();
+  } else {
+    loadNextQuestion();
+  }
+}
+
+// Sidebar domain filter click
+document.querySelectorAll('.domain-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.getElementById('domainSelect').value = el.dataset.domain;
+  });
+});
+</script>
+</body>
+</html>
