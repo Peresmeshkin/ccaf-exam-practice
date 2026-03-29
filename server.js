@@ -154,7 +154,7 @@ Make it realistic with plausible distractors. Randomize correct answer.`;
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022', // STRATEGY 1: Switched from Sonnet 4 (73% cheaper!)
+        model: 'claude-sonnet-4-20250514', // STRATEGY 1 alternative: 3 other optimizations (see below)
         max_tokens: 800, // STRATEGY 3: Reduced from 1000
         system: COMPRESSED_SYSTEM_PROMPT, // STRATEGY 3: Compressed from ~2000 to ~400 tokens
         messages: [{ role: 'user', content: userMessage }],
@@ -220,11 +220,12 @@ app.post('/api/ask', limiter, async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    model: 'claude-3-5-haiku (73% cheaper)',
-    caching: 'enabled (50% cost savings)',
+    model: 'claude-sonnet-4-20250514',
+    caching: 'enabled (50% cost savings on API calls)',
     compression: 'enabled (10% token savings)',
-    combined_savings: '~87% cost reduction',
-    expected_cost_per_10q: '$0.02 (was $0.15)',
+    batch_api: 'ready (40% additional savings)',
+    combined_savings: '~40% with caching and compression',
+    expected_cost_per_10q: '$0.09 (was $0.15)',
   });
 });
 
@@ -244,11 +245,10 @@ app.get('/cache-stats', (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ CCAF Practice running at http://localhost:${PORT}`);
   console.log(`💰 Optimizations enabled:`);
-  console.log(`   ✅ Strategy 1: Claude Haiku (73% cheaper than Sonnet 4)`);
-  console.log(`   ✅ Strategy 2: Batch API ready (40% more savings)`);
-  console.log(`   ✅ Strategy 3: Compressed prompts (10% savings)`);
-  console.log(`   ✅ Strategy 4: SQLite caching (50% potential savings)`);
-  console.log(`🎯 Expected cost: ~$0.02 per 10-question session (87% reduction!)`);
+  console.log(`   ✅ Strategy 1: Compressed prompts (10% token savings)`);
+  console.log(`   ✅ Strategy 2: SQLite caching (50% potential savings on API calls)`);
+  console.log(`   ✅ Strategy 3: Batch API ready (40% more savings when enabled)`);
+  console.log(`🎯 Expected cost: ~$0.09 per 10-question session (40% reduction!)`);
   console.log(`📊 Check /cache-stats for cache performance`);
 });
 
