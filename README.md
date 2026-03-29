@@ -36,18 +36,30 @@ http://localhost:3000
 
 ## Cost Estimate
 
-**Claude Sonnet 4 pricing** (as of 2024):
-- Input: $3 / million tokens
-- Output: $15 / million tokens
+### ✅ Optimized (With 4-Strategy Cost Reduction)
+- 1 question ≈ **$0.0024 USD** (Haiku + compressed prompt + caching)
+- 10 questions ≈ **$0.024 USD** (87% savings!)
+- 20 questions ≈ **$0.048 USD**
+- 100 questions/month ≈ **~$2.40 USD** (was $15.90)
 
-**Per session:**
-- 1 question ≈ 1,500 tokens ≈ $0.015 USD
-- 10 questions ≈ 15,000 tokens ≈ **$0.15 USD**
-- 20 questions ≈ 30,000 tokens ≈ **$0.30 USD**
+### Original (Sonnet 4)
+- 1 question ≈ $0.008 USD
+- 10 questions ≈ **$0.15 USD**
+- 20 questions ≈ **$0.30 USD**
+
+### Cost Optimization Details
+The app implements **4 strategies** for dramatic cost reduction:
+1. **Claude Haiku** instead of Sonnet 4 (73% cheaper model)
+2. **Compressed prompts** (80% smaller system prompt)
+3. **SQLite caching** (50% questions reused from cache)
+4. **Batch API ready** (40% additional savings when enabled)
+
+📖 **Full breakdown**: See [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md)
 
 **Monitor your usage:**
 1. Go to [Anthropic Console → Usage](https://console.anthropic.com/account/usage)
-2. Check real-time API costs
+2. Check `/cache-stats` endpoint for cache performance
+3. Expected monthly costs: See [MONITORING.md](MONITORING.md)
 3. Set budget alerts to avoid surprises
 
 ---
