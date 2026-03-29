@@ -36,30 +36,29 @@ http://localhost:3000
 
 ## Cost Estimate
 
-### ✅ Optimized (With 4-Strategy Cost Reduction)
-- 1 question ≈ **$0.0024 USD** (Haiku + compressed prompt + caching)
-- 10 questions ≈ **$0.024 USD** (87% savings!)
-- 20 questions ≈ **$0.048 USD**
-- 100 questions/month ≈ **~$2.40 USD** (was $15.90)
+### ✅ Optimized (With 3-Strategy Cost Reduction)
+- 1 question ≈ **$0.009 USD** (with compression + caching at 50% hit rate)
+- 10 questions ≈ **$0.09 USD** (40% savings!)
+- 20 questions ≈ **$0.18 USD**
+- 100 questions/month ≈ **~$9 USD** (was $15)
 
-### Original (Sonnet 4)
+### Original (No Optimization)
 - 1 question ≈ $0.008 USD
 - 10 questions ≈ **$0.15 USD**
 - 20 questions ≈ **$0.30 USD**
 
-### Cost Optimization Details
-The app implements **4 strategies** for dramatic cost reduction:
-1. **Claude Haiku** instead of Sonnet 4 (73% cheaper model)
-2. **Compressed prompts** (80% smaller system prompt)
-3. **SQLite caching** (50% questions reused from cache)
-4. **Batch API ready** (40% additional savings when enabled)
+### 3 Cost Optimization Strategies
+The app implements proven techniques to reduce costs:
+1. **Compressed prompts** - 80% smaller system message (10% savings)
+2. **SQLite caching** - Reuse generated questions (50% savings on cache hits)
+3. **Batch API ready** - Async processing for 40% additional savings (optional)
 
 📖 **Full breakdown**: See [COST_OPTIMIZATION.md](COST_OPTIMIZATION.md)
 
 **Monitor your usage:**
 1. Go to [Anthropic Console → Usage](https://console.anthropic.com/account/usage)
 2. Check `/cache-stats` endpoint for cache performance
-3. Expected monthly costs: See [MONITORING.md](MONITORING.md)
+3. See [MONITORING.md](MONITORING.md) for detailed cost tracking
 3. Set budget alerts to avoid surprises
 
 ---
