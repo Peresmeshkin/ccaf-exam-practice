@@ -73,10 +73,18 @@ db.run(`
     user_answer TEXT,
     correct_answer TEXT,
     time_taken_seconds INTEGER,
+    hover_sequence TEXT,
+    options_considered INTEGER,
+    hesitation_detected INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (session_id) REFERENCES user_sessions(session_id)
   )
 `);
+
+// Add columns if they don't exist (for existing databases)
+db.run(`ALTER TABLE session_answers ADD COLUMN hover_sequence TEXT`, () => {});
+db.run(`ALTER TABLE session_answers ADD COLUMN options_considered INTEGER`, () => {});
+db.run(`ALTER TABLE session_answers ADD COLUMN hesitation_detected INTEGER`, () => {});
 
 // Create user_stats table for aggregated performance metrics
 db.run(`
@@ -376,12 +384,22 @@ app.post('/api/save-session', async (req, res) => {
       }
     );
 
-    // Save individual answers
+    // Save individual answers with behavioral data
     for (const answer of sessionAnswers) {
       db.run(
-        `INSERT INTO session_answers (session_id, domain, topic, difficulty, is_correct)
-         VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, answer.domain, answer.topic, answer.difficulty, answer.is_correct ? 1 : 0],
+        `INSERT INTO session_answers (session_id, domain, topic, difficulty, is_correct, time_taken_seconds, hover_sequence, options_considered, hesitation_detected)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sessionId, 
+          answer.domain, 
+          answer.topic, 
+          answer.difficulty, 
+          answer.is_correct ? 1 : 0,
+          answer.thinking_time_seconds || 0,
+          answer.hover_sequence || '',
+          answer.options_considered || 1,
+          answer.hesitation_detected || 0
+        ],
         (err) => {
           if (err) console.error('Answer save error:', err);
         }

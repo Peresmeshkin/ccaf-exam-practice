@@ -1364,6 +1364,164 @@ async function fetchUserProgress() {
   }
 }
 
+// ─── Behavioral Analysis Functions ────────────────────────────────────────
+function analyzeBehavior() {
+  if (!state.answers || state.answers.length === 0) return null;
+
+  const analysis = {
+    averageThinkingTime: 0,
+    totalThinkingTime: 0,
+    questionsWithHesitation: 0,
+    averageOptionsConsidered: 0,
+    confusingQuestions: [],
+    quickDecisions: [],
+    slowCorrect: [],
+    thinkingTimeByDomain: {}
+  };
+
+  let totalThinkingTime = 0;
+  let hesitationCount = 0;
+  let optionsTotal = 0;
+
+  state.answers.forEach((answer, idx) => {
+    const thinkTime = answer.thinking_time_seconds || 0;
+    const optionsConsidered = answer.options_considered || 1;
+    const hesitation = answer.hesitation_detected || 0;
+
+    // Accumulate totals
+    totalThinkingTime += thinkTime;
+    optionsTotal += optionsConsidered;
+    if (hesitation) hesitationCount++;
+
+    // Track by domain
+    if (!analysis.thinkingTimeByDomain[answer.domain]) {
+      analysis.thinkingTimeByDomain[answer.domain] = { total: 0, count: 0 };
+    }
+    analysis.thinkingTimeByDomain[answer.domain].total += thinkTime;
+    analysis.thinkingTimeByDomain[answer.domain].count++;
+
+    // Categorize questions
+    if (thinkTime > 45 && !answer.correct) {
+      // Long thinking + wrong = confusing question
+      analysis.confusingQuestions.push({
+        idx: idx + 1,
+        topic: answer.topic,
+        thinkTime,
+        optionsConsidered,
+        hesitation
+      });
+    } else if (thinkTime < 10 && answer.correct) {
+      // Quick + correct = strong knowledge
+      analysis.quickDecisions.push({
+        idx: idx + 1,
+        topic: answer.topic,
+        thinkTime
+      });
+    } else if (thinkTime > 30 && answer.correct) {
+      // Slow + correct = deliberate thinking
+      analysis.slowCorrect.push({
+        idx: idx + 1,
+        topic: answer.topic,
+        thinkTime
+      });
+    }
+  });
+
+  analysis.averageThinkingTime = Math.round(totalThinkingTime / state.answers.length);
+  analysis.totalThinkingTime = totalThinkingTime;
+  analysis.questionsWithHesitation = hesitationCount;
+  analysis.averageOptionsConsidered = (optionsTotal / state.answers.length).toFixed(1);
+
+  return analysis;
+}
+
+// Display behavioral analysis on results screen
+function displayBehavioralInsights() {
+  const analysis = analyzeBehavior();
+  if (!analysis) return;
+
+  const insightsDiv = document.getElementById('behavioralInsights') || createBehavioralInsightsDiv();
+  
+  let html = `<div class="insights-header">🧠 Your Thinking Patterns</div>`;
+  
+  // Thinking time stats
+  html += `<div class="insight-stat">
+    <span>⏱️ Average thinking time:</span> <strong>${analysis.averageThinkingTime}s</strong> per question
+    <span style="font-size:12px; color:var(--text-muted)">(Total: ${Math.floor(analysis.totalThinkingTime / 60)}m ${analysis.totalThinkingTime % 60}s)</span>
+  </div>`;
+
+  html += `<div class="insight-stat">
+    <span>🤔 Decision confidence:</span> <strong>${state.answers.length - analysis.questionsWithHesitation}/${state.answers.length}</strong> confident picks
+    <span style="font-size:12px; color:var(--text-muted)">(${analysis.questionsWithHesitation} reconsidered)</span>
+  </div>`;
+
+  html += `<div class="insight-stat">
+    <span>🎯 Options considered per question:</span> <strong>${analysis.averageOptionsConsidered}</strong>
+  </div>`;
+
+  // Confusing questions (slow + wrong)
+  if (analysis.confusingQuestions.length > 0) {
+    html += `<div style="margin-top:16px; padding:12px; background:rgba(248, 81, 73, 0.1); border-left:3px solid #f85149; border-radius:4px;">
+      <strong style="color:#f85149">⚠️ Confusing Questions (took long, got wrong)</strong>
+      <ul style="margin:8px 0 0 20px; font-size:12px;">`;
+    analysis.confusingQuestions.slice(0, 3).forEach(q => {
+      html += `<li><strong>Q${q.idx}</strong>: ${q.topic} — ${q.thinkTime}s, considered ${q.optionsConsidered} options</li>`;
+    });
+    if (analysis.confusingQuestions.length > 3) {
+      html += `<li style="color:var(--text-muted)">... and ${analysis.confusingQuestions.length - 3} more</li>`;
+    }
+    html += `</ul></div>`;
+  }
+
+  // Quick decisions (fast + correct)
+  if (analysis.quickDecisions.length > 0) {
+    html += `<div style="margin-top:12px; padding:12px; background:rgba(63, 185, 80, 0.1); border-left:3px solid #3fb950; border-radius:4px;">
+      <strong style="color:#3fb950">✅ Quick Wins (fast & correct)</strong>
+      <ul style="margin:8px 0 0 20px; font-size:12px;">`;
+    analysis.quickDecisions.slice(0, 3).forEach(q => {
+      html += `<li><strong>Q${q.idx}</strong>: ${q.topic} — ${q.thinkTime}s (mastered ✓)</li>`;
+    });
+    if (analysis.quickDecisions.length > 3) {
+      html += `<li style="color:var(--text-muted)">... and ${analysis.quickDecisions.length - 3} more</li>`;
+    }
+    html += `</ul></div>`;
+  }
+
+  // Slow but correct (deliberate thinking)
+  if (analysis.slowCorrect.length > 0) {
+    html += `<div style="margin-top:12px; padding:12px; background:rgba(88, 166, 255, 0.1); border-left:3px solid #58a6ff; border-radius:4px;">
+      <strong style="color:#58a6ff">🧠 Deliberate Thinking (slow but correct)</strong>
+      <ul style="margin:8px 0 0 20px; font-size:12px;">`;
+    analysis.slowCorrect.slice(0, 3).forEach(q => {
+      html += `<li><strong>Q${q.idx}</strong>: ${q.topic} — ${q.thinkTime}s (required thought ✓)</li>`;
+    });
+    if (analysis.slowCorrect.length > 3) {
+      html += `<li style="color:var(--text-muted)">... and ${analysis.slowCorrect.length - 3} more</li>`;
+    }
+    html += `</ul></div>`;
+  }
+
+  html += `<div style="margin-top:12px; font-size:11px; color:var(--text-muted); padding:8px; background:var(--surface); border-radius:3px;">
+    💡 <strong>Insight:</strong> 
+    ${analysis.questionsWithHesitation > state.answers.length * 0.4 
+      ? 'You reconsidered many options — trust your instinct more or review weak topics.'
+      : analysis.confusingQuestions.length > 2
+      ? `Focus on these ${analysis.confusingQuestions.length} confusing questions in your next study session.`
+      : 'Strong decision-making pattern! Your quick picks are mostly correct.'}
+  </div>`;
+
+  insightsDiv.innerHTML = html;
+}
+
+function createBehavioralInsightsDiv() {
+  let progressDiv = document.getElementById('progressInsights');
+  let div = document.createElement('div');
+  div.id = 'behavioralInsights';
+  div.style.cssText = 'margin-top: 20px; padding: 16px; background: var(--surface2); border-left: 3px solid #58a6ff; border-radius: 4px;';
+  progressDiv.parentNode.insertBefore(div, progressDiv.nextSibling);
+  return div;
+}
+
 // Display progress insights on results screen
 function displayProgressInsights() {
   if (!state.userProgress) return;
@@ -1475,6 +1633,11 @@ function renderQuestion(q) {
   const idx = state.currentIdx;
   const domain = q._domain;
 
+  // Track when question is rendered for thinking time calculation
+  state.questionStartTime = Date.now();
+  state.hoverSequence = [];
+  state.firstHoveredOption = null;
+
   document.getElementById('qNumber').textContent = `Question ${idx + 1} of ${state.totalQ}`;
 
   const tag = document.getElementById('qDomainTag');
@@ -1504,6 +1667,15 @@ function renderQuestion(q) {
       <div class="option-text">${q.options[letter]}</div>
     `;
     btn.onclick = () => selectAnswer(letter, q);
+    
+    // Track hover events for cognitive analysis
+    btn.addEventListener('mouseenter', () => {
+      if (!state.firstHoveredOption) state.firstHoveredOption = letter;
+      if (!state.hoverSequence.includes(letter)) {
+        state.hoverSequence.push(letter);
+      }
+    });
+    
     container.appendChild(btn);
   });
 
@@ -1531,18 +1703,28 @@ function selectAnswer(chosen, q) {
   const isCorrect = chosen === q.correct;
   const domain = q._domain;
 
+  // Calculate thinking time in seconds
+  const thinkingTime = Math.round((Date.now() - state.questionStartTime) / 1000);
+  
+  // Detect hesitation (user picked different option than first hovered)
+  const hesitation = state.firstHoveredOption && state.firstHoveredOption !== chosen ? 1 : 0;
+
   // Update stats
   state.domainStats[domain].t++;
   if (isCorrect) state.domainStats[domain].c++;
   else state.wrongQuestions.push(q);
 
-  // Track answer with topic and difficulty for progress tracking
+  // Track answer with behavioral data for adaptive learning
   state.answers.push({ 
     correct: isCorrect, 
     domain, 
     topic: q.topic,
     difficulty: q.difficulty,
-    skipped: false 
+    skipped: false,
+    thinking_time_seconds: thinkingTime,
+    hover_sequence: state.hoverSequence.join(','),
+    options_considered: state.hoverSequence.length,
+    hesitation_detected: hesitation
   });
 
   // Show feedback
@@ -1657,7 +1839,6 @@ function createStartScreenStatsDiv() {
   
   return div;
 }
-}
 
 function skipQuestion() {
   const q = state.questions[state.currentIdx];
@@ -1754,6 +1935,9 @@ function showResults() {
   } else {
     gapSection.style.display = 'none';
   }
+
+  // Display behavioral analytics
+  displayBehavioralInsights();
 
   updateDomainScores();
 }
